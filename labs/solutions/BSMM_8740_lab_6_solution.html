@@ -1,96 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Q11 Solutions – ARIMA Time Series Forecasting</title>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Quarto / Lab 6–style CSS -->
-<style>
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  margin: 0;
-  padding: 30px;
-  line-height: 1.6;
-  background: #fafafa;
-}
-h1, h2, h3 {
-  font-weight: 600;
-  color: #2c3e50;
-}
-pre {
-  background: #f4f4f4;
-  padding: 15px;
-  border-radius: 6px;
-  overflow-x: auto;
-}
-code {
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 0.95em;
-}
-hr {
-  border: 0;
-  height: 1px;
-  background: #ddd;
-  margin: 40px 0;
-}
-.callout {
-  border-left: 4px solid #3498db;
-  background: #eef6ff;
-  padding: 10px 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-</style>
+  <title>Lab 11 – Time Series Methods (Q11 Solutions) | osb</title>
+
+  <!-- Jekyll theme CSS from your site -->
+  <link rel="stylesheet" href="/osb/assets/main.css">
+  
+  <style>
+    /* Grey solution callouts */
+    .solution-box {
+      background: #f0f0f0;
+      border-left: 4px solid #888;
+      padding: 12px 15px;
+      margin-bottom: 25px;
+      border-radius: 4px;
+    }
+    .solution-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    pre {
+      background: #f7f7f7;
+      padding: 10px 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      border: 1px solid #ddd;
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>Lab 11 – Time Series Methods (Q11 Solutions)</h1>
+<header class="site-header" role="banner">
+  <div class="wrapper">
+    <a class="site-title" href="/osb/">osb</a>
+    <nav class="site-nav">
+      <div class="trigger">
+        <a class="page-link" href="/osb/labs/solutions/BSMM_8740_Q11_solutions.html">BSMM 8740 – Q11 Solutions</a>
+      </div>
+    </nav>
+  </div>
+</header>
 
-<h2>Introduction</h2>
-<p>
-In this exercise, we follow the same time-series workflow used in Lab 6 to perform ARIMA forecasting.  
-We use historical closing prices from the five major Canadian banks and focus specifically on forecasting the closing price of <b>CIBC (symbol: CM)</b>.
-</p>
+<main class="page-content">
+  <div class="wrapper">
+    <article class="post">
 
-<hr>
+      <header class="post-header">
+        <h1 class="post-title">Lab 11 – Time Series Methods (Q11 Solutions)</h1>
+      </header>
 
-<h2>Packages</h2>
-<pre><code class="language-r">
+      <div class="post-content">
+
+        <h2>Introduction</h2>
+        <p>
+          In this lab-style exercise, we follow the same time-series workflow used in Lab 6 to build an ARIMA forecast model. 
+          We use daily closing prices for five major Canadian banks and focus specifically on forecasting the closing price of 
+          <strong>CIBC (symbol: CM)</strong>.
+        </p>
+
+        <hr>
+
+        <h2>Packages</h2>
+        <pre><code class="language-r">
 library(tidyverse)
 library(tidymodels)
 library(timetk)
 library(modeltime)
-</code></pre>
+        </code></pre>
 
-<hr>
+        <hr>
 
-<h2>The Data</h2>
-<p>
-The dataset includes daily closing prices for:
-</p>
-
-<ul>
-<li>TD</li>
-<li>BMO</li>
-<li>BNS</li>
-<li>RBC</li>
-<li>CM</li>
-</ul>
-
-<p>We load the prepared CSV:</p>
+        <h2>The Data</h2>
+        <p>The dataset includes daily closing prices for TD, BMO, BNS, RBC, and CM. Load the CSV:</p>
 
 <pre><code class="language-r">
 arima_data <- readr::read_csv("data/stock_data.csv", show_col_types = FALSE)
 </code></pre>
 
-<hr>
+        <hr>
 
-<h2>Exercise 1: EDA (Plotting the Data)</h2>
-
-<div class="callout"><b>SOLUTION:</b></div>
-
-<pre><code class="language-r">
+        <h2>Exercise 1: EDA (Plotting the Data)</h2>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
 arima_data %>%
   plot_time_series(
     .date_var   = date,
@@ -99,23 +96,19 @@ arima_data %>%
     .interactive = FALSE,
     .title = "Daily Closing Prices for Major Canadian Banks"
   )
-</code></pre>
+          </code></pre>
+        </div>
 
-<hr>
+        <hr>
 
-<h2>Exercise 2: Training and Test Dataset</h2>
-<p>Create the split:</p>
-
-<div class="callout"><b>SOLUTION:</b></div>
-
-<pre><code class="language-r">
+        <h2>Exercise 2: Training and Test Split</h2>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
 cm_data <- arima_data %>% filter(symbol == "CM")
 
 splits <- cm_data %>%
-  time_series_split(
-    initial = "10 years",
-    assess  = "1 year"
-  )
+  time_series_split(initial = "10 years", assess = "1 year")
 
 splits %>%
   tk_time_series_cv_plan() %>%
@@ -124,15 +117,15 @@ splits %>%
     .value    = close,
     .title    = "Training/Test Split for CM Closing Price"
   )
-</code></pre>
+          </code></pre>
+        </div>
 
-<hr>
+        <hr>
 
-<h2>Exercise 3: Recipe + Model + Workflow</h2>
-
-<div class="callout"><b>SOLUTION:</b></div>
-
-<pre><code class="language-r">
+        <h2>Exercise 3: Recipe + Model + Workflow</h2>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
 time_rec <- recipe(close ~ ., data = training(splits))
 
 model_spec_arima <- arima_reg() %>%
@@ -142,15 +135,15 @@ workflow_fit_arima <- workflow() %>%
   add_recipe(time_rec) %>%
   add_model(model_spec_arima) %>%
   fit(training(splits))
-</code></pre>
+          </code></pre>
+        </div>
 
-<hr>
+        <hr>
 
-<h2>Exercise 4: Model Table, Calibration, and Forecast</h2>
-
-<div class="callout"><b>SOLUTION:</b></div>
-
-<pre><code class="language-r">
+        <h2>Exercise 4: Calibration + Forecast</h2>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
 models_tbl <- modeltime_table(workflow_fit_arima)
 
 calibration_tbl <- models_tbl %>%
@@ -165,24 +158,34 @@ calibration_tbl %>%
     .legend_max_width = 20,
     .title = "ARIMA Forecast for CIBC (CM)"
   )
-</code></pre>
+          </code></pre>
+        </div>
 
-<hr>
+        <hr>
 
-<h2>Exercise 5: Accuracy Metrics</h2>
-
-<div class="callout"><b>SOLUTION:</b></div>
-
-<pre><code class="language-r">
+        <h2>Exercise 5: Accuracy Metrics</h2>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
 accuracy_tbl <- calibration_tbl %>% modeltime_accuracy()
 accuracy_tbl
-</code></pre>
+          </code></pre>
+          <p>The <strong>R²</strong> value (rsq) reported here reflects test forecast performance.</p>
+        </div>
 
-<p>The <b>rsq</b> value in the output is the ARIMA model's R² on the test data.</p>
+        <hr>
+        <p><em>End of Q11 Solutions</em></p>
 
-<hr>
+      </div>
+    </article>
+  </div>
+</main>
 
-<h3>End of Q11 Solutions</h3>
+<footer class="site-footer h-card">
+  <div class="wrapper">
+    <h2 class="footer-heading">osb</h2>
+  </div>
+</footer>
 
 </body>
 </html>
