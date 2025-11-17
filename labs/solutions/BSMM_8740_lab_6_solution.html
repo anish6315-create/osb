@@ -116,6 +116,7 @@ arima_data %>%
         <hr>
 
         <h2>Exercise 2: Training and Test Split</h2>
+        <p>Create test/trains splits of the data, where the **initial period is 10 years** and the **assessment period is 1 year**. Plot the test/train series for CIBC</p>
         <div class="solution-box">
           <div class="solution-title">SOLUTION</div>
           <pre><code class="language-r">
@@ -137,6 +138,7 @@ splits %>%
         <hr>
 
         <h2>Exercise 3: Recipe + Model + Workflow</h2>
+        <p>Define a data preprocessing **recipe** and a **model** definition. The recipe is based on the formula CM ~ ., and make sure the data argument uses the training data. The model engine should be **auto_arima**. Finally, create a **workflow** object containing the recipe and the model spec, and then **fit** the model using the training data</p>
         <div class="solution-box">
           <div class="solution-title">SOLUTION</div>
           <pre><code class="language-r">
@@ -155,6 +157,7 @@ workflow_fit_arima <- workflow() %>%
         <hr>
 
         <h2>Exercise 4: Calibration + Forecast</h2>
+        <p>Create a **models table** with your fitted model and a **calibration table** that uses the **testing** data. Generate a forecast with the **testing** data and the original **arima_data**. Plot the forecast.</p>
         <div class="solution-box">
           <div class="solution-title">SOLUTION</div>
           <pre><code class="language-r">
@@ -178,6 +181,7 @@ calibration_tbl %>%
         <hr>
 
         <h2>Exercise 5: Accuracy Metrics</h2>
+        <p>Compute the accuracy metrics for the forecast. What is the $R^2$ (rsq) metric.</p>
         <div class="solution-box">
           <div class="solution-title">SOLUTION</div>
           <pre><code class="language-r">
@@ -188,6 +192,219 @@ accuracy_tbl
         </div>
 
         <hr>
+
+
+        
+        <hr>
+
+        <h2>Exercise 5: D is treatment and Y is response varaible</h2>
+        <p>Q-12 Execute the following code to create simulated observational data, where D is the treatment variable and Y is the response variable.
+{r}
+#| echo: true
+#| message: false
+#| error: false
+set.seed(8740)
+
+n <- 800
+V <- rbinom(n, 1, 0.2)
+W <- 3*V + rnorm(n)
+D <- V + rnorm(n)
+Y <- D + W^2 + 1 + rnorm(n)
+Z <- D + Y + rnorm(n)
+data_obs <- tibble::tibble(V=V, W=W, D=D, Y=Y, Z=Z)
+In the code below we fit several different outcome models. Compare the resulting coefficients for D. Which regressions appear to lead to unbiased estimates of the causal effect? **(1.5 points)**
+{r}
+#| echo: true
+#| label: outcome models
+#
+# linear model of Y on X
+lin_YX <- lm(Y ~ D, data=data_obs)
+
+# linear model of Y on X and V
+lin_YV <- lm(Y ~ D + V, data=data_obs)
+
+# linear model Y on X and W
+lin_YW <- lm(Y ~ D + W, data=data_obs)
+
+List all valid adjustment sets for the causal structure in this data (a good first step is to sketch the causal relations between variables - you don't need **ggdag::dagify - just look at the data spec**). **(1.5 points)** ::: 
+
+
+{#Q12 .callout-note appearance="simple" icon="false"} ## YOUR ANSWER Q12: 1. Regressions that appear to lead to unbiased estimates of the causal effect are: lin\_\_❓ 
+2. Valid adjustment sets for the data used in this question are: lin\_\_❓ ::: 
+</p>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
+accuracy_tbl <- calibration_tbl %>% modeltime_accuracy()
+accuracy_tbl
+          </code></pre>
+          <p>The <strong>R²</strong> value (rsq) reported here reflects test forecast performance.</p>
+        </div>
+
+        <hr>
+ <hr>
+
+        <h2>Exercise 13: Spam Classification Dataset</h2>
+        <p>## For this question we'll use the [**Spam Classification Dataset**]{.underline} available from the UCI Machine Learning Repository. It features a collection of spam and non-spam emails represented as feature vectors, making it suitable for a logistic regression model. The data is in your data/ directory and the metadata is in the data/spambase/ directory. We'll use this data to create a model for detecting email spam using **logistic regression**.
+{r}
+#| eval: false
+#| message: false
+#| label: read the spam data
+spam_data <- readr::read_csv('data/spam.csv', show_col_types = FALSE) |> 
+  tibble::as_tibble() |> 
+  dplyr::mutate(type = forcats::as_factor(type))
+
+
+::: {#Q13 .callout-note appearance="simple" icon="false"} ## 
+
+YOUR ANSWER Q13: **(1)** Split the data into test and training sets, and create a default recipe and a default model specification. Use the ***glmnet*** engine for the model, with **penalty** = 0.05 & **mixture** = 0.5. **(1 point)**
+</p>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
+
+
+#| eval: false
+#| message: false
+#| label: read the spam data
+spam_data <- readr::read_csv('data/spam.csv', show_col_types = FALSE) |> 
+  tibble::as_tibble() |> 
+  dplyr::mutate(type = forcats::as_factor(type))
+
+set.seed(8740)
+
+data_split    <- rsample::initial_split(spam_data, prop = 0.7)
+default_train <- rsample::training(data_split)
+default_test  <- rsample::testing(data_split)
+
+
+train <- default_train
+test <- default_test
+default_recipe <- recipe(type ~ ., data = train) |> 
+  step_dummy(all_nominal_predictors())
+
+default_model <- logistic_reg(
+  penalty = 0.05,
+  mixture = 0.5,
+) |>
+  set_engine('glmnet')
+
+          </code></pre>
+        </div>
+
+        <hr>
+  <hr>
+
+        
+        <p>create a default workflow object with the recipe and the model specification, fit the workflow using parsnip::fit and the **training** data, and then generate the testing results by applying the fit to the **testing** data using broom::augment .</p>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
+
+# create a workflow
+default_workflow <- workflows::workflow() |>
+  workflows::add_recipe(default_recipe) |>
+  workflows::add_model(default_model)
+
+# fit the workflow
+lm_fit <-
+  default_workflow |>
+  parsnip::fit(default_train)
+
+# training dataset
+#training_results <-
+ # broom::augment(lm_fit , default_train)
+
+#testing dataset
+testing_results <- broom::augment(lm_fit, new_data = test)
+          </code></pre>
+         
+        </div>
+
+        <hr>
+
+   <hr>
+
+        
+        <p>Evaluate the testing results by plotting the **roc_auc curve**, and calculating the **accuracy**.</p>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
+
+colnames(testing_data)
+args(roc_auc)
+# compute roc_auc and plot the roc_curve
+training_results |>
+  yardstick::roc_auc(type, .pred_spam)
+training_results |>
+  yardstick::roc_curve(type, .pred_spam) |> 
+  autoplot()
+#awccuracy
+training_results |>
+  yardstick::accuracy(type, .pred_class)
+          </code></pre>
+         
+        </div>
+  <p>This model could be made more accurate by tuning the penalty and mixture hyperparameters using cross-validation (tune_grid).
+cross validation tuning of penalty and mixture hyperparameters would increase the accuracy.</p>
+
+        <hr>
+
+
+    <hr>
+
+        <h2>breif question answer</h2>
+        <p>Q14 .callout-note appearance="simple" icon="false"} ## YOUR ANSWER Q14: 1. When preprocessing data for time series models, what is the function timetk::step_fourier() used for? **(1 point)** - The timetk::step_fourier() function is used for: ❓ </p>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
+The timetk::step_fourier() function is used to create Fourier (sine/cosine) features that model complex seasonality patterns in time series data.          </code></pre>
+         
+        </div>
+
+        <hr>
+ <hr>
+
+        
+        <p>Q14. 2 .Give an example of its use in a recipe that is engineered for use with weekly data records. **(1 point)** - An example of its use in a recipe that is engineered for use with weekly data records is: ❓
+</p>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
+
+#example of itsuse
+#recipe(value ~ date, data = weekly_data) |>
+ # timetk::step_timeseries_signature(date) |>
+  #timetk::step_fourier(date, period = 52, K = 3)</code></pre>
+         
+        </div>
+
+        <hr>
+
+  <hr>
+
+        
+        <p>Q-15 In a paper in the prestigious **Proceedings of the National Academy of Science** (PNAS) last year: ::: callout-note **S. A. Rains, A. S. Richards**, *US state vaccine mandates did not influence COVID-19 vaccination rates but reduced uptake of COVID-19 boosters and flu vaccines compared to bans on vaccine restrictions*. **Proc. Natl. Acad. Sci.** U.S.A. 121(8), e2313610121 (2024). ::: Rains & Richards performed a causal analysis and found that compared to states that banned COVID-19 vaccination requirements, states that imposed COVID-19 [vaccination mandates]{.underline} exhibit [lower adult and child uptake of flu vaccines and lower uptake of COVID-19 boosters]{.underline}. They included their data and their code (in R), as is best practice. In their analysis, the treatment was binary (vaccine mandate (1) or ban (0)). The proportion of people in a state that had been vaccinated was included to account for the general inclination toward COVID-19 vaccination in a state (mean centered). The outcome variable reflected the proportion of eligible people in a state who had received a booster or flu shot. However, in a letter to the PNAS on September 30, 2024 , the author of the letter, **Jack Fitzgerald,** argued that Rains & Richards had included a **bad control** in their analysis, a variable that biased their results. ::: callout-note **Fitzgerald, J.** *US states that mandated COVID-19 vaccination see higher, not lower, take-up of COVID-19 boosters and flu vaccines*. **Proc. Natl. Acad. Sci.** U.S.A. 121(41), e2403758121 (2024). ::: Here is Fitzgerald's DAG from his letter: 
+</p>
+  <h2>
+YOUR ANSWER Q15: Which variable did Fitzgerald think was the bad control, and why was it bad ?
+</h2>
+        <div class="solution-box">
+          <div class="solution-title">SOLUTION</div>
+          <pre><code class="language-r">
+
+#The bad control was the state’s COVID-19 vaccination rate. It was a bad control because the mandate itself affects how many people get vaccinated, and that number then affects flu and booster uptake. Since this variable sits in the middle of the cause-and-effect chain, adjusting for it blocks part of the real effect and biases the results.</code></pre>
+         
+        </div>
+
+        <hr>
+
+
+
+
+
+
+  
         <!-- <p><em>End of Q11 Solutions</em></p> -->
 
       </div>
