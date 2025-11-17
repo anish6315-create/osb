@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Q11 Solutions – ARIMA Time Series Forecasting</title>
+
+<!-- Quarto / Lab 6–style CSS -->
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 30px;
+  line-height: 1.6;
+  background: #fafafa;
+}
+h1, h2, h3 {
+  font-weight: 600;
+  color: #2c3e50;
+}
+pre {
+  background: #f4f4f4;
+  padding: 15px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+code {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.95em;
+}
+hr {
+  border: 0;
+  height: 1px;
+  background: #ddd;
+  margin: 40px 0;
+}
+.callout {
+  border-left: 4px solid #3498db;
+  background: #eef6ff;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Lab 11 – Time Series Methods (Q11 Solutions)</h1>
+
+<h2>Introduction</h2>
+<p>
+In this exercise, we follow the same time-series workflow used in Lab 6 to perform ARIMA forecasting.  
+We use historical closing prices from the five major Canadian banks and focus specifically on forecasting the closing price of <b>CIBC (symbol: CM)</b>.
+</p>
+
+<hr>
+
+<h2>Packages</h2>
+<pre><code class="language-r">
+library(tidyverse)
+library(tidymodels)
+library(timetk)
+library(modeltime)
+</code></pre>
+
+<hr>
+
+<h2>The Data</h2>
+<p>
+The dataset includes daily closing prices for:
+</p>
+
+<ul>
+<li>TD</li>
+<li>BMO</li>
+<li>BNS</li>
+<li>RBC</li>
+<li>CM</li>
+</ul>
+
+<p>We load the prepared CSV:</p>
+
+<pre><code class="language-r">
+arima_data <- readr::read_csv("data/stock_data.csv", show_col_types = FALSE)
+</code></pre>
+
+<hr>
+
+<h2>Exercise 1: EDA (Plotting the Data)</h2>
+
+<div class="callout"><b>SOLUTION:</b></div>
+
+<pre><code class="language-r">
+arima_data %>%
+  plot_time_series(
+    .date_var   = date,
+    .value      = close,
+    .facet_vars = symbol,
+    .interactive = FALSE,
+    .title = "Daily Closing Prices for Major Canadian Banks"
+  )
+</code></pre>
+
+<hr>
+
+<h2>Exercise 2: Training and Test Dataset</h2>
+<p>Create the split:</p>
+
+<div class="callout"><b>SOLUTION:</b></div>
+
+<pre><code class="language-r">
+cm_data <- arima_data %>% filter(symbol == "CM")
+
+splits <- cm_data %>%
+  time_series_split(
+    initial = "10 years",
+    assess  = "1 year"
+  )
+
+splits %>%
+  tk_time_series_cv_plan() %>%
+  plot_time_series_cv_plan(
+    .date_var = date,
+    .value    = close,
+    .title    = "Training/Test Split for CM Closing Price"
+  )
+</code></pre>
+
+<hr>
+
+<h2>Exercise 3: Recipe + Model + Workflow</h2>
+
+<div class="callout"><b>SOLUTION:</b></div>
+
+<pre><code class="language-r">
+time_rec <- recipe(close ~ ., data = training(splits))
+
+model_spec_arima <- arima_reg() %>%
+  set_engine("auto_arima")
+
+workflow_fit_arima <- workflow() %>%
+  add_recipe(time_rec) %>%
+  add_model(model_spec_arima) %>%
+  fit(training(splits))
+</code></pre>
+
+<hr>
+
+<h2>Exercise 4: Model Table, Calibration, and Forecast</h2>
+
+<div class="callout"><b>SOLUTION:</b></div>
+
+<pre><code class="language-r">
+models_tbl <- modeltime_table(workflow_fit_arima)
+
+calibration_tbl <- models_tbl %>%
+  modeltime_calibrate(testing(splits))
+
+calibration_tbl %>%
+  modeltime_forecast(
+    new_data    = testing(splits),
+    actual_data = cm_data
+  ) %>%
+  plot_modeltime_forecast(
+    .legend_max_width = 20,
+    .title = "ARIMA Forecast for CIBC (CM)"
+  )
+</code></pre>
+
+<hr>
+
+<h2>Exercise 5: Accuracy Metrics</h2>
+
+<div class="callout"><b>SOLUTION:</b></div>
+
+<pre><code class="language-r">
+accuracy_tbl <- calibration_tbl %>% modeltime_accuracy()
+accuracy_tbl
+</code></pre>
+
+<p>The <b>rsq</b> value in the output is the ARIMA model's R² on the test data.</p>
+
+<hr>
+
+<h3>End of Q11 Solutions</h3>
+
+</body>
+</html>
