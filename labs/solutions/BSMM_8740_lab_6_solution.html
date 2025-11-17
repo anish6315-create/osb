@@ -238,7 +238,12 @@ List all valid adjustment sets for the causal structure in this data (a good fir
 accuracy_tbl <- calibration_tbl %>% modeltime_accuracy()
 accuracy_tbl
           </code></pre>
-          <p>The <strong>R²</strong> value (rsq) reported here reflects test forecast performance.</p>
+          <p>1 <strong>Only the model that adjusts for V (lin_YV) gives an unbiased effect of D on Y.
+This is because V is the real confounder that affects both D and Y, so we need to control for it.</strong> </p>
+
+          
+          <p>2 <strong>The only valid adjustment set is {V}.
+We should adjust for V, but we should NOT adjust for W (a mediator) or Z (a post-treatment variable).</strong> </p>
         </div>
 
         <hr>
